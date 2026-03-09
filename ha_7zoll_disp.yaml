@@ -1,0 +1,65 @@
+esphome:
+  name: matouch-test
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: esp-idf
+    #version: 5.5.3  # Stable, vermeidet Git‑Issues
+    version: recommended
+    #platform_version: 6.12.0
+wifi: {ssid: "..."}
+api: {}
+i2c:
+  - id: touch_i2c
+    sda: GPIO17
+    scl: GPIO18
+    scan: true
+
+display:
+  - platform: rpi_dpi_rgb
+    id: rgb_display
+    color_order: RGB
+    pclk_frequency: 16MHz
+    dimensions:
+      width: 1024
+      height: 600
+    de_pin: 40
+    hsync_pin: 39
+    vsync_pin: 41
+    pclk_pin: 42
+    hsync_back_porch: 128
+    hsync_front_porch: 40
+    hsync_pulse_width: 48
+    vsync_back_porch: 45
+    vsync_front_porch: 13
+    vsync_pulse_width: 3
+    data_pins:
+      red:
+        - 45        #r1
+        - 48        #r2
+        - 47        #r3
+        - 21        #r4
+        - 14        #r5
+      green:
+        - 5         #g0
+        - 6         #g1
+        - 7         #g2
+        - 15        #g3
+        - 16        #g4
+        - 4         #g5
+      blue:
+        - 8         #b1
+        - 3         #b2
+        - 46        #b3
+        - 9         #b4
+        - 1         #b5
+touchscreen:
+  - platform: gt911
+    display: rgb_display
+    id: touch_screen
+    update_interval: 16ms
+    i2c_id: touch_i2c
+    transform:
+      swap_xy: false
+      mirror_x: false
+      mirror_y: false
