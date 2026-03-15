@@ -162,6 +162,7 @@ font:
       "\U000F14E4", # sunny-off
       "\U000F0335", # mdi-lightbulb
       "\U000F0336", # mdi-lightbulb-outline
+      "\U000F05F1", # mdi-ev-station
       ]
 
 globals:
@@ -201,19 +202,17 @@ sensor:
             text:
               format: "%.1f°C"
               args: [ 'x' ]
-#binary_sensor:
-#  - platform: homeassistant
-#    id: remote_light
-#    entity_id: light.buerolicht
-#    publish_initial_state: true
-#    on_state:
-#      then:
-#        lvgl.widget.update:
-#          id: light_btn
-#          state:
-#            checked: !lambda return x;
-
-
+binary_sensor:
+  - platform: homeassistant
+    id: evcc_ladeplan_aktiv
+    entity_id: input_boolean.evcc_ladeplan_aktiv
+    publish_initial_state: true
+    on_state:
+      then:
+        - lvgl.widget.update:
+            id: charge_60perc_7
+            state:
+              checked: !lambda 'return x;'
 
 text_sensor:
   - platform: homeassistant
@@ -462,6 +461,43 @@ lvgl:
                   text: "Outdoor"
                   align: CENTER
                   y: 65
+    - id: Licht
+      widgets:
+        - obj:
+            align: TOP_MID
+            styles: header_footer
+            widgets:
+              - label:
+                  text: "Licht"
+                  align: CENTER
+                  text_align: CENTER
+                  text_color: 0xFFFFFF
+
+        - button:
+            x: 100
+            y: 100
+            width: 120
+            height: 120
+            checkable: true
+            id: btn_lightbulb
+            widgets:
+              - label:
+                  id: lbl_lightbulb
+                  align: CENTER
+                  y: -15
+                  text_font: icons_100
+                  text: "\U000F0336" # mdi-lightbulb-outline
+              - label:
+                  text: "Buerolicht"
+                  align: CENTER
+                  y: 45
+                  text_font: montserrat_18
+            on_short_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data:
+                    entity_id: light.buerolicht
+
     - id: Charge
       widgets:
         - obj:
@@ -475,23 +511,67 @@ lvgl:
                   text_color: 0xFFFFFF
 
         - button:
-            x: 110
-            y: 140
-            width: 90
-            height: 50
+            x: 100
+            y: 100
+            width: 140
+            height: 140
             checkable: true
-            id: btn_lightbulb
+            id: charge_PV_Start
             widgets:
               - label:
-                  id: lbl_lightbulb
+                  id: charge_pv_start_icon
                   align: CENTER
+                  y: -15
                   text_font: icons_100
-                  text: "\U000F0336" # mdi-lightbulb-outline
+                  text: "\U000F05F1" # mdi-ev-station
+              - label:
+                  text: "PV-Start"
+                  align: CENTER
+                  y: 45
+                  text_font: montserrat_18
             on_short_click:
               - homeassistant.action:
                   action: light.toggle
                   data:
                     entity_id: light.buerolicht
+        - button:
+            x: 100
+            y: 260
+            width: 140
+            height: 140
+            checkable: true
+            id: charge_60perc_7
+            bg_color: 0x000000
+            border_color: 0x00AA00
+            border_width: 3
+            bg_opa: TRANSP
+            checked:
+              bg_color: 0x00AA00
+              border_color: 0x00AA00
+              bg_opa: COVER
+            widgets:
+              - label:
+                  id: charge_60perc_7_icon
+                  align: CENTER
+                  y: -15
+                  text_font: icons_100
+                  text: "\U000F05F1"
+              - label:
+                  text: "60% bis 7:00"
+                  align: CENTER
+                  y: 45
+                  text_font: montserrat_18
+            on_short_click:
+              - if:
+                  condition:
+                    lambda: 'return id(evcc_ladeplan_aktiv).state;'
+                  then:
+                    - homeassistant.action:
+                        action: script.evcc_ladeplan_loeschen
+                  else:
+                    - homeassistant.action:
+                        action: script.evcc_ladeplan_morgen
+
 
 # Live-Update
 #interval:
