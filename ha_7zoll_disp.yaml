@@ -60,11 +60,6 @@ i2c:
     scl: GPIO18
     scan: true
 
-image:
-  - id: logo
-    file: "assets/logo.jpg"
-    type: RGB565
-    resize: 190x63
 
 
 display:
@@ -116,6 +111,22 @@ touchscreen:
       swap_xy: false
       mirror_x: false
       mirror_y: false
+    on_release:
+      - if:
+          condition: lvgl.is_paused
+          then:
+            - logger.log: "LVGL resuming"
+            - lvgl.resume:
+            - lvgl.widget.redraw:
+            - light.turn_on: display_backlight
+
+
+light:
+  - platform: monochromatic
+    id: display_backlight
+    #output: backlight
+    #name: backlight
+    restore_mode: ALWAYS_ON
 
 
 # binary_sensor:
@@ -228,6 +239,18 @@ text_sensor:
               snprintf(buf, sizeof(buf), "%s", icon.c_str());
               return buf;
 
+number:
+  - platform: template
+    name: LVGL Screen timeout
+    optimistic: true
+    id: display_timeout
+    unit_of_measurement: "s"
+    initial_value: 45
+    restore_value: true
+    min_value: 10
+    max_value: 180
+    step: 5
+    mode: box
 #######################################################################
 #                                 LVGL
 #######################################################################
@@ -348,6 +371,12 @@ lvgl:
                   on_press:
                     then:
                       lvgl.page.next:
+  on_idle:
+    timeout: !lambda "return (id(display_timeout).state * 1000);"
+    then:
+      - logger.log: "LVGL is idle"
+      - light.turn_off: display_backlight
+      - lvgl.pause:
   pages:
     - id: main_page
       widgets:
