@@ -360,33 +360,33 @@ lvgl:
                   align: CENTER
                   text_align: CENTER
                   text_color: 0xFFFFFF
-        - label:
-            id: temp_label
-            x: 50
-            y: 50
-            width: 400
-            height: 80
-            text: "---"
-            text_font: montserrat_18
+#        - label:
+#            id: temp_label
+#            x: 50
+#            y: 50
+#            width: 400
+#            height: 80
+#            text: "---"
+#            text_font: montserrat_18
             #font_size: 48  # Größer für 7"
-        - button:
-            x: 110
-            y: 40
-            width: 90
-            height: 50
-            checkable: true
-            id: btn_lightbulb
-            widgets:
-              - label:
-                  id: lbl_lightbulb
-                  align: CENTER
-                  text_font: icons_100
-                  text: "\U000F0336" # mdi-lightbulb-outline
-            on_short_click:
-              - homeassistant.action:
-                  action: light.toggle
-                  data:
-                    entity_id: light.buerolicht
+#        - button:
+#            x: 110
+#            y: 40
+#            width: 90
+#            height: 50
+#            checkable: true
+#            id: btn_lightbulb
+#            widgets:
+#              - label:
+#                  id: lbl_lightbulb
+#                  align: CENTER
+#                  text_font: icons_100
+#                  text: "\U000F0336" # mdi-lightbulb-outline
+#            on_short_click:
+#              - homeassistant.action:
+#                  action: light.toggle
+#                  data:
+#                    entity_id: light.buerolicht
         - meter:
             align: CENTER
             height: 180
@@ -433,17 +433,47 @@ lvgl:
                   text: "Outdoor"
                   align: CENTER
                   y: 65
+    - id: Charge
+      widgets:
+        - obj:
+            align: TOP_MID
+            styles: header_footer
+            widgets:
+              - label:
+                  text: "Charge"
+                  align: CENTER
+                  text_align: CENTER
+                  text_color: 0xFFFFFF
+
+        - button:
+            x: 110
+            y: 40
+            width: 90
+            height: 50
+            checkable: true
+            id: btn_lightbulb
+            widgets:
+              - label:
+                  id: lbl_lightbulb
+                  align: CENTER
+                  text_font: icons_100
+                  text: "\U000F0336" # mdi-lightbulb-outline
+            on_short_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data:
+                    entity_id: light.buerolicht
 
 # Live-Update
-interval:
-  - interval: 2s
-    then:
-     - lvgl.label.update:
-        id: temp_label
-        text: !lambda |-
-                  char buf[32];
-                  snprintf(buf, sizeof(buf), "Aussentemperatur: %.1f °C", id(temp_aussen).state);
-                  return std::string(buf);
+#interval:
+#  - interval: 2s
+#    then:
+#     - lvgl.label.update:
+#        id: temp_label
+#        text: !lambda |-
+#                  char buf[32];
+#                  snprintf(buf, sizeof(buf), "Aussentemperatur: %.1f °C", id(temp_aussen).state);
+#                  return std::string(buf);
 #######################################################################
 #  SENSOR
 #######################################################################
