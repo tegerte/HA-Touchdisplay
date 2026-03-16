@@ -1,6 +1,12 @@
 esphome:
   name: matouch-esp32s3-7
   friendly_name: Matouch_ESP32S3_7
+  on_boot:
+    priority: -100       # nach LVGL-Init
+    then:
+      - lvgl.label.update:
+          id: lbl_pv_start_soc
+          text: "PV-Start, SoC: --"
 
 esp32:
   board: esp32-s3-devkitc-1
@@ -163,6 +169,7 @@ font:
       "\U000F0335", # mdi-lightbulb
       "\U000F0336", # mdi-lightbulb-outline
       "\U000F05F1", # mdi-ev-station
+      "\U000F0A72", # solar-power
       ]
 
 globals:
@@ -202,6 +209,19 @@ sensor:
             text:
               format: "%.1f°C"
               args: [ 'x' ]
+  - platform: homeassistant
+    id: battery_soc
+    entity_id: sensor.evcc_battery_soc
+    internal: true
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_pv_start_soc
+            text: !lambda |-
+              char buf[24];
+              snprintf(buf, sizeof(buf), "PV-Start, SoC: %d%%", (int)x);
+              return std::string(buf);
+
 binary_sensor:
   - platform: homeassistant
     id: evcc_ladeplan_aktiv
@@ -237,6 +257,15 @@ text_sensor:
               }
               snprintf(buf, sizeof(buf), "%s", icon.c_str());
               return buf;
+  - platform: homeassistant
+    id: evcc_mode
+    entity_id: sensor.evcc_e_auto_laden_mode
+    internal: true
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_pv_start_mode
+            text: !lambda return x;
 
 #number:
 #  - platform: template
@@ -356,7 +385,7 @@ lvgl:
           rows:
             - buttons:
                 - id: page_prev
-                  text: "\uF053"
+                  text: "Automationen"
                   on_press:
                     then:
                       lvgl.page.previous:
@@ -366,7 +395,7 @@ lvgl:
                     then:
                       lvgl.page.show: main_page
                 - id: page_next
-                  text: "\uF054"
+                  text: "Laden"
                   on_press:
                     then:
                       lvgl.page.next:
@@ -509,7 +538,9 @@ lvgl:
                   align: CENTER
                   text_align: CENTER
                   text_color: 0xFFFFFF
-
+###  -------------------------------------------------------------------------------------------
+###  -----------------------------        STARTE PV-LADEN Button    -----------------------------
+###  -------------------------------------------------------------------------------------------
         - button:
             x: 100
             y: 100
@@ -517,23 +548,49 @@ lvgl:
             height: 140
             checkable: true
             id: charge_PV_Start
+            bg_color: 0x00c0ff
+            border_color: 0x005d7f
+            border_width: 5
+            checked:
+              bg_color: 0x00AA00
+              border_color: 0x00AA00
+              bg_opa: COVER
             widgets:
               - label:
                   id: charge_pv_start_icon
                   align: CENTER
                   y: -15
                   text_font: icons_100
-                  text: "\U000F05F1" # mdi-ev-station
+                  text: "\U000F0A72"           # mdi-solar-power
+#              - label:
+#                  text: "PV-Start"
+#                  align: CENTER
+#                  y: 40
+#                  text_font: montserrat_18
               - label:
-                  text: "PV-Start"
+                  id: lbl_pv_start_soc
                   align: CENTER
-                  y: 45
+                  y: 40
                   text_font: montserrat_18
+                  text_color: 0xCCCCCC
+                  text: "SoC: --%"
             on_short_click:
               - homeassistant.action:
-                  action: light.toggle
-                  data:
-                    entity_id: light.buerolicht
+                  action: script.evcc_minpv_aktivieren  # HA-Script aufrufen
+
+              # Aktueller Modus (unter dem Button)
+        - label:
+            id: lbl_pv_start_mode
+            x: 100
+            y: 250
+            width: 140
+            text_align: CENTER
+            text: "Modus: --"
+            text_font: montserrat_14
+            text_color: 0x7A8FA6
+###  -------------------------------------------------------------------------------------------
+###  -----------------------------        60% um 7 Button          -----------------------------
+###  -------------------------------------------------------------------------------------------
         - button:
             x: 100
             y: 260
@@ -541,10 +598,10 @@ lvgl:
             height: 140
             checkable: true
             id: charge_60perc_7
-            bg_color: 0x000000
-            border_color: 0x00AA00
-            border_width: 3
-            bg_opa: TRANSP
+            bg_color: 0x00c0ff
+            border_color: 0x005d7f
+            border_width: 5
+            #bg_opa: TRANSP
             checked:
               bg_color: 0x00AA00
               border_color: 0x00AA00
