@@ -28,9 +28,9 @@ Navigation über eine Buttonmatrix am unteren Bildschirmrand (zurück / Home / w
 - Solar-Sensoren: PV heute, PV verbleibend, Autarkie, Sonnenuntergang
 - EV-Sensoren: Reichweite, Ladeende, SOC-Soll, Abfahrtszeit, Kosten, Session-Daten
 
-## Temperaturverlauf-Graph
+## Dashboard-Graph
 
-Der Außentemperaturverlauf wird als Graph auf `main_page` angezeigt. Die Pipeline:
+Das Übersichtsdashboard wird als Graph auf `main_page` angezeigt. Die Pipeline:
 
 ```
 HA-Automation (browser_mod) → Python-Server (port 8765) → ESP32 (online_image)
