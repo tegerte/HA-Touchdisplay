@@ -11,11 +11,11 @@ ESPHome-Konfiguration für ein **Makerfabs MaTouch ESP32-S3 7-Zoll-Display** mit
 
 ## UI-Seiten
 
-| Seite | Inhalt |
-|-------|--------|
-| `main_page` | Außentemperatur-Anzeige (Tachometer) |
-| `Licht` | Licht ein/aus schalten |
-| `Charge` | E-Auto Ladesteuerung (PV-Laden, Zeitplan) |
+| Seite       | Inhalt                                    |
+| ----------- | ----------------------------------------- |
+| `main_page` | Außentemperatur-Anzeige (Tachometer)      |
+| `Licht`     | Licht ein/aus schalten                    |
+| `Charge`    | E-Auto Ladesteuerung (PV-Laden, Zeitplan) |
 
 Navigation über eine Buttonmatrix am unteren Bildschirmrand (zurück / Home / weiter).
 
@@ -35,8 +35,6 @@ Navigation über eine Buttonmatrix am unteren Bildschirmrand (zurück / Home / w
 ## Kompilieren & Flashen
 
 ```bash
-source esphome-2026-1-5/bin/activate
-
 esphome compile ha_7zoll_disp.yaml   # nur kompilieren
 esphome run ha_7zoll_disp.yaml       # kompilieren + OTA-Upload
 esphome logs ha_7zoll_disp.yaml      # serielle Logs anzeigen
