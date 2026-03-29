@@ -1,79 +1,95 @@
-# HA-Touchdisplay
+# HA Touch Display
 
-ESPHome-Konfiguration für ein **Makerfabs MaTouch ESP32-S3 7-Zoll-Display** mit Home Assistant Integration.
+ESPHome configuration for a **Makerfabs MaTouch ESP32-S3 7-inch display** integrated with Home Assistant.
+
+![Display](display.jpg)
 
 ## Hardware
 
 - **MCU:** ESP32-S3, 16 MB Flash, Octal PSRAM, 240 MHz
 - **Display:** 1024×600 RGB Parallel Interface
-- **Touch:** GT911 kapazitiv (I2C)
+- **Touch:** GT911 capacitive (I2C)
 - **Backlight:** LEDC PWM (GPIO10)
 
-## UI-Seiten
+## UI Pages
 
-| Seite       | Inhalt                                                                |
-| ----------- | --------------------------------------------------------------------- |
-| `main_page` | Thermometer, Vertikalbars, Solar-Infotabelle, Temperaturverlauf-Graph |
-| `Licht`     | Licht ein/aus schalten                                                |
-| `Charge`    | E-Auto Ladesteuerung (PV-Laden, Zeitplan) + EV-Infotabelle            |
+| Page        | Content                                                                 |
+| ----------- | ----------------------------------------------------------------------- |
+| `main_page` | Thermometer, vertical bars, solar info table, temperature graph         |
+| `Licht`     | Office light on/off toggle                                              |
+| `Charge`    | EV charging control (PV charging, schedule) + EV info table            |
 
-Navigation über eine Buttonmatrix am unteren Bildschirmrand (zurück / Home / weiter).
+Navigation via a button matrix at the bottom of the screen (back / home / next).
 
-## Home Assistant Integration
+## Vertical Bar Graphs (left side)
 
-- Außentemperatur-Sensor
-- E-Auto Batterie-SoC & Lademodus (evcc)
-- Ladeplan-Status (`evcc_ladeplan_aktiv`)
-- Lichtsteuerung via HA-Action
-- Solar-Sensoren: PV heute, PV verbleibend, Autarkie, Sonnenuntergang
-- EV-Sensoren: Reichweite, Ladeende, SOC-Soll, Abfahrtszeit, Kosten, Session-Daten
+Four vertical bars on the left display live status at a glance:
 
-## Dashboard-Graph
+| Bar   | Color      | Sensor                     | Scale  |
+| ----- | ---------- | -------------------------- | ------ |
+| 1     | Blue       | EV range (km)              | 400 km |
+| 2     | Orange     | PV power                   | 10 kW  |
+| 3     | Green      | Home battery SoC           | 100 %  |
+| 4     | Dark green | EV charging power          | 11 kW  |
 
-Das Übersichtsdashboard wird als Graph auf `main_page` angezeigt. Die Pipeline:
+Bar 4 includes a **yellow marker line at 3.6 kW** indicating the single-phase charging threshold — above the line means 3-phase charging is active.
+
+## Temperature Graph
+
+The outdoor temperature history is displayed as a graph on `main_page`. The pipeline:
 
 ```
-HA-Automation (browser_mod) → Python-Server (port 8765) → ESP32 (online_image)
+HA Automation (browser_mod) → Python server (port 8765) → ESP32 (online_image)
 ```
 
-1. **HA-Automation** navigiert alle 15 min zu einer Lovelace-View mit apexcharts-card,
-   rendert das SVG via JavaScript und schickt es per POST an den Python-Server
-2. **Python-Server** (`/opt/graph_server/server.py` auf dem Homeserver) konvertiert
-   SVG → JPEG via cairosvg + Pillow und speichert es im RAM
-3. **ESP32** holt das JPEG alle 2 min via `online_image` und zeigt es via LVGL `image`-Widget an
+1. **HA Automation** navigates every 15 min to a Lovelace view with an apexcharts-card,
+   renders the SVG via JavaScript and POSTs it to the Python server
+2. **Python server** (`/opt/graph_server/server.py` on the home server) converts
+   SVG → JPEG via cairosvg + Pillow and stores it in RAM
+3. **ESP32** fetches the JPEG every 2 min via `online_image` and displays it via an LVGL `image` widget
 
-### Server einrichten (Linux Mint / Debian)
+### Server setup (Linux Mint / Debian)
 
 ```bash
 sudo apt install python3-cairosvg python3-pil
 sudo mkdir -p /opt/graph_server
-# server.py erstellen (siehe CLAUDE.md)
+sudo nano /opt/graph_server/server.py   # paste server code
 sudo nano /etc/systemd/system/graph-server.service
 sudo systemctl enable --now graph-server
 ```
 
-### Abhängigkeiten
+### Dependencies
 
-- **browser_mod** (HACS) — für JavaScript-Ausführung im Browser
-- **apexcharts-card** (HACS) — für den Temperaturverlauf-Graph
+- **browser_mod** (HACS) — for JavaScript execution in the browser
+- **apexcharts-card** (HACS) — for the temperature graph
 
-## Dateien
+## Home Assistant Integration
 
-- `ha_7zoll_disp.yaml` — komplette ESPHome-Konfiguration
-- `secrets.yaml` — WLAN-Zugangsdaten (nicht im Repo)
+- Outdoor temperature sensor
+- EV battery range & charging mode (evcc)
+- Charging plan status (`evcc_ladeplan_aktiv`)
+- Light control via HA action
+- Solar sensors: PV today, PV remaining, self-sufficiency, sunset time
+- EV sensors: range, charge end, target SoC, departure time, costs, session data
+- EV charging power (`sensor.evcc_e_auto_laden_charge_power`)
+
+## Files
+
+- `ha_7zoll_disp.yaml` — complete ESPHome configuration
+- `secrets.yaml` — WiFi credentials (not in repo)
 - `fonts/` — Material Design Icons TTF
 
-## Kompilieren & Flashen
+## Build & Flash
 
 ```bash
-esphome compile ha_7zoll_disp.yaml        # nur kompilieren
-esphome run ha_7zoll_disp.yaml            # kompilieren + OTA-Upload
-esphome run ha_7zoll_disp.yaml --device /dev/cu.usbmodem114401  # via USB
-esphome logs ha_7zoll_disp.yaml           # serielle Logs anzeigen
+esphome compile ha_7zoll_disp.yaml                                        # compile only
+esphome run ha_7zoll_disp.yaml                                            # compile + OTA upload
+esphome run ha_7zoll_disp.yaml --device /dev/cu.usbmodem114401            # via USB
+esphome logs ha_7zoll_disp.yaml --device 192.168.1.65                     # serial logs (macOS: use IP, not mDNS)
 ```
 
-## Ressourcen
+## Resources
 
-- [ESPHome LVGL Dokumentation](https://esphome.io/cookbook/lvgl/)
+- [ESPHome LVGL Documentation](https://esphome.io/cookbook/lvgl/)
 - [Makerfabs MaTouch ESP32-S3](https://www.makerfabs.com/matouch-esp32-s3.html)
 - [Material Design Icons](https://materialdesignicons.com/)

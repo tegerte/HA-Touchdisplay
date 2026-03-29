@@ -218,6 +218,7 @@ font:
       "\U000F0A72", # mdi-solar-power (PV)
       "\U000F0079", # mdi-battery (Hausbatterie)
       "\U000F059C", # mdi-weather-sunset-down (Sonnenuntergang)
+      "\U000F05F1", # mdi-ev-plug (Ladeleistung)
     ]
 
   # Tiny MDI icons for info-table rows
@@ -321,7 +322,7 @@ sensor:
             int fill_h = (int)(x * 4.5f);
             if (fill_h < 0) fill_h = 0;
             if (fill_h > 450) fill_h = 450;
-            lv_obj_set_size(id(fill_hausbatt), 56, fill_h);
+            lv_obj_set_size(id(fill_hausbatt), 44, fill_h);
             lv_obj_set_pos(id(fill_hausbatt), 0, 450 - fill_h);
         - lvgl.label.update:
             id: lbl_bar_hausbatt
@@ -341,7 +342,7 @@ sensor:
             int fill_h = (int)(x / 400.0f * 450.0f);
             if (fill_h < 0) fill_h = 0;
             if (fill_h > 450) fill_h = 450;
-            lv_obj_set_size(id(fill_mercedes), 56, fill_h);
+            lv_obj_set_size(id(fill_mercedes), 44, fill_h);
             lv_obj_set_pos(id(fill_mercedes), 0, 450 - fill_h);
         - lvgl.label.update:
             id: lbl_bar_mercedes
@@ -376,13 +377,33 @@ sensor:
             if (pct < 0.0f) pct = 0.0f;
             if (pct > 100.0f) pct = 100.0f;
             int fill_h = (int)(pct * 4.5f);
-            lv_obj_set_size(id(fill_pv), 56, fill_h);
+            lv_obj_set_size(id(fill_pv), 44, fill_h);
             lv_obj_set_pos(id(fill_pv), 0, 450 - fill_h);
         - lvgl.label.update:
             id: lbl_bar_pv
             text: !lambda |-
               char buf[16];
               snprintf(buf, sizeof(buf), "%d W", (int)x);
+              return std::string(buf);
+
+  # EV Ladeleistung → drives vertical bar on main_page (max 11 kW; entity reports W)
+  - platform: homeassistant
+    id: ev_charge_power
+    entity_id: sensor.evcc_e_auto_laden_charge_power
+    internal: true
+    on_value:
+      then:
+        - lambda: |-
+            int fill_h = (int)(x / 11.0f * 450.0f);
+            if (fill_h < 0) fill_h = 0;
+            if (fill_h > 450) fill_h = 450;
+            lv_obj_set_size(id(fill_ev_charge), 44, fill_h);
+            lv_obj_set_pos(id(fill_ev_charge), 0, 450 - fill_h);
+        - lvgl.label.update:
+            id: lbl_bar_ev_charge
+            text: !lambda |-
+              char buf[16];
+              snprintf(buf, sizeof(buf), "%.1f kW", x);
               return std::string(buf);
 
 #######################################################################
@@ -952,11 +973,11 @@ lvgl:
             width: 729
             height: 275
 
-        # Bar 1: Mercedes SoC (blau) – x=30, Abstand zur nächsten Bar = 28px (halbe Breite)
+        # Bar 1: Mercedes Reichweite (blau) – x=30, width=44
         - obj:
             x: 30
             y: 45
-            width: 56
+            width: 44
             height: 450
             bg_color: 0x1C2128
             bg_opa: COVER
@@ -970,7 +991,7 @@ lvgl:
                   id: fill_mercedes
                   x: 0
                   y: 450
-                  width: 56
+                  width: 44
                   height: 0
                   bg_color: 0x2F8CD8
                   bg_opa: COVER
@@ -980,25 +1001,25 @@ lvgl:
             id: lbl_bar_mercedes
             x: 30
             y: 498
-            width: 56
-            text: "--%"
+            width: 44
+            text: "-- km"
             text_align: CENTER
             text_font: montserrat_14
             text_color: 0xCCCCCC
         - label:
             x: 30
-            y: 514
-            width: 56
+            y: 530
+            width: 44
             text: "\U000F010B"
             text_align: CENTER
             text_font: icons_30
             text_color: 0xAAAAAA
 
-        # Bar 2: PV Leistung (orange, 100% = 10 kW) – x=114
+        # Bar 2: PV Leistung (orange, 100% = 10 kW) – x=90
         - obj:
-            x: 114
+            x: 90
             y: 45
-            width: 56
+            width: 44
             height: 450
             bg_color: 0x1C2128
             bg_opa: COVER
@@ -1012,7 +1033,7 @@ lvgl:
                   id: fill_pv
                   x: 0
                   y: 450
-                  width: 56
+                  width: 44
                   height: 0
                   bg_color: 0xFF8C00
                   bg_opa: COVER
@@ -1020,27 +1041,27 @@ lvgl:
                   radius: 4
         - label:
             id: lbl_bar_pv
-            x: 114
+            x: 90
             y: 498
-            width: 56
+            width: 44
             text: "-- W"
             text_align: CENTER
             text_font: montserrat_14
             text_color: 0xCCCCCC
         - label:
-            x: 114
-            y: 514
-            width: 56
+            x: 90
+            y: 530
+            width: 44
             text: "\U000F0A72"
             text_align: CENTER
             text_font: icons_30
             text_color: 0xAAAAAA
 
-        # Bar 3: Hausbatterie SoC (grün) – x=198
+        # Bar 3: Hausbatterie SoC (grün) – x=150
         - obj:
-            x: 198
+            x: 150
             y: 45
-            width: 56
+            width: 44
             height: 450
             bg_color: 0x1C2128
             bg_opa: COVER
@@ -1054,7 +1075,7 @@ lvgl:
                   id: fill_hausbatt
                   x: 0
                   y: 450
-                  width: 56
+                  width: 44
                   height: 0
                   bg_color: 0x00AA00
                   bg_opa: COVER
@@ -1062,18 +1083,71 @@ lvgl:
                   radius: 4
         - label:
             id: lbl_bar_hausbatt
-            x: 198
+            x: 150
             y: 498
-            width: 56
+            width: 44
             text: "--%"
             text_align: CENTER
             text_font: montserrat_14
             text_color: 0xCCCCCC
         - label:
-            x: 198
-            y: 514
-            width: 56
+            x: 150
+            y: 530
+            width: 44
             text: "\U000F0079"
+            text_align: CENTER
+            text_font: icons_30
+            text_color: 0xAAAAAA
+
+        # Bar 4: EV Ladeleistung (cyan) – x=210, skaliert auf 11 kW
+        - obj:
+            x: 210
+            y: 45
+            width: 44
+            height: 450
+            bg_color: 0x1C2128
+            bg_opa: COVER
+            border_width: 1
+            border_color: 0x0D5C2A
+            radius: 4
+            pad_all: 0
+            scrollbar_mode: "off"
+            widgets:
+              - obj:
+                  id: fill_ev_charge
+                  x: 0
+                  y: 450
+                  width: 44
+                  height: 0
+                  bg_color: 0x0D5C2A
+                  bg_opa: COVER
+                  border_width: 0
+                  radius: 4
+        # Markierungslinie bei 3,6 kW (1-phasig) = 147px vom Boden → y=348
+        - obj:
+            x: 210
+            y: 348
+            width: 44
+            height: 2
+            bg_color: 0xFFD700
+            bg_opa: COVER
+            border_width: 0
+            radius: 0
+            pad_all: 0
+        - label:
+            id: lbl_bar_ev_charge
+            x: 210
+            y: 498
+            width: 44
+            text: "-- kW"
+            text_align: CENTER
+            text_font: montserrat_14
+            text_color: 0xCCCCCC
+        - label:
+            x: 210
+            y: 530
+            width: 44
+            text: "\U000F05F1"
             text_align: CENTER
             text_font: icons_30
             text_color: 0xAAAAAA
