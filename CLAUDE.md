@@ -61,12 +61,14 @@ Everything lives in a single file: **`ha_7zoll_disp.yaml`**
 
 **Vertikalbars (linke Seite):**
 
-- Bar 1 (blau, Mercedes Reichweite): x=30, skaliert auf 400km max
-- Bar 2 (orange, PV-Leistung): x=114, skaliert auf 10kW max
-- Bar 3 (grün, Hausbatterie SoC): x=198, skaliert auf 100%
+- Bar 1 (blau, Mercedes Reichweite): x=30, width=44, skaliert auf 400km max
+- Bar 2 (orange, PV-Leistung): x=90, width=44, skaliert auf 10kW max
+- Bar 3 (grün, Hausbatterie SoC): x=150, width=44, skaliert auf 100%
+- Bar 4 (dunkelgrün, EV-Ladeleistung): x=210, width=44, skaliert auf 11kW, sensor.evcc_e_auto_laden_charge_power (in kW)
+- Gelbe Markierungslinie bei 3,6 kW (1-phasig) als separates obj-Widget auf y=348
 - Jede Bar: Container height=450, fill-from-bottom via Lambda in `on_value`
 
-**Temperaturverlauf-Graph (`main_page`):**
+**Solarenergie-Graph (`main_page`):**
 
 - `online_image` Komponente holt JPEG von Homeserver (192.168.1.145:8765) alle 2 min
 - LVGL `image` Widget: x=265, y=270, width=729, height=275
