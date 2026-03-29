@@ -34,9 +34,9 @@ Four vertical bars on the left display live status at a glance:
 
 Bar 4 includes a **yellow marker line at 3.6 kW** indicating the single-phase charging threshold — above the line means 3-phase charging is active.
 
-## Temperature Graph
+## Solar Energy Graph
 
-The outdoor temperature history is displayed as a graph on `main_page`. The pipeline:
+The solar energy flows (PV production, consumption, battery, grid) are displayed as a graph on `main_page`. The pipeline:
 
 ```
 HA Automation (browser_mod) → Python server (port 8765) → ESP32 (online_image)
