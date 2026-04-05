@@ -23,6 +23,8 @@ Navigation via a button matrix at the bottom of the screen (Automationen / home 
 
 ## Charge Page
 
+![Charge Page](charge_page.jpg)
+
 The Charge page provides full EV charging control:
 
 - **4 Mode buttons** (PV / Min+PV / Schnell / Aus) — set evcc charging mode via `script.evcc_lademodus`
