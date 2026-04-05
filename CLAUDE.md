@@ -18,7 +18,7 @@ esphome compile ha_7zoll_disp.yaml
 esphome run ha_7zoll_disp.yaml
 
 # Upload via USB serial (device IP: 192.168.1.65)
-esphome run ha_7zoll_disp.yaml --device /dev/cu.usbmodem114401
+esphome run ha_7zoll_disp.yaml --device /dev/cu.usbmodem14401
 
 # View serial logs (use IP directly, mDNS port 5353 conflicts on macOS)
 esphome logs ha_7zoll_disp.yaml --device 192.168.1.65
@@ -44,8 +44,22 @@ Everything lives in a single file: **`ha_7zoll_disp.yaml`**
 
 - Global theme defined once in `lvgl.theme` — applies to all buttons, switches, sliders, buttonmatrix
 - `header_footer` style definition used for page headers and the bottom navigation bar (bg: 0x252D38→0x1C2128 gradient, dark theme)
-- Bottom navigation: `buttonmatrix` in `top_layer` with three buttons (prev page / home / next page)
+- Bottom navigation: `buttonmatrix` in `top_layer` with three buttons — each navigates directly via `lvgl.page.show` (Automationen→Licht, Home→main_page, Laden→Charge)
 - Pages: `main_page` (outdoor temperature meter + solar table + graph), `Licht` (light toggle), `Charge` (EV charging controls + EV table)
+
+**Charge-Seite Layout (linke Seite):**
+
+- 4 Modus-Buttons in Reihe (y=55, je 120×70): PV, Min+PV, Schnell, Aus
+  - Rufen `script.evcc_lademodus` mit `data: modus:` Parameter auf
+  - Aktiver Modus wird grün via `select.evcc_e_auto_laden_mode` Sensor (on_value + on_boot sync)
+- Modus-Label (y=135, lbl_charge_mode) + SoC-Label (lbl_charge_soc)
+- Ladeplan-Button (y=175, 516×80): `charge_60perc_7`, checkable, toggelt `script.evcc_ladeplan_morgen`/`loeschen`
+- PV-Start-Button (y=270, 516×80): `charge_PV_Start`, checkable=false, ruft `script.evcc_minpv_aktivieren`
+  - Wird grün wenn evcc_mode == "minpv" (via Sensor, nicht via Klick)
+- Horizontale Fill-Bars als separate obj-Widgets nach den Buttons:
+  - Oben: Ladeleistungs-Balken (dunkelgrün, 0x0D5C2A), max 11kW → 516px
+  - Gelbe 1-Phasen-Markierung bei x=189 (3.6kW)
+  - Unten: Reichweite-Balken (orange, 0xFF9500), max 400km → 516px
 
 **Info-Tabellen (rechte Seite, x=570, y=35, width=424):**
 
@@ -100,13 +114,17 @@ Abhängigkeiten: `python3-cairosvg`, `python3-pil` (via apt)
 - Sensoren via `platform: homeassistant`
 - Binary sensor: `evcc_ladeplan_aktiv` (charging plan active state)
 - Text sensor: `ts_remote_light` (light on/off/unavailable state)
+- Text sensor: `evcc_mode` — entity_id: `select.evcc_e_auto_laden_mode` (nicht sensor!)
+- Time component: `ha_time` (platform: homeassistant) — für relative Zeitberechnung
 - Actions called via `homeassistant.action` on button press
+- `script.evcc_lademodus` mit `data: modus:` Parameter (pv/minpv/now/off/status)
 
 **Fonts:**
 
-- `montserrat_14/16/18/20/28`: aus gfonts
+- `montserrat_14/16/18/20/28`: LVGL built-in Fonts (kein €-Zeichen!)
+- `montserrat_28_ext`: Eigene gfonts-Montserrat mit €-Glyph (U+20AC), für Kostenfelder
 - `icons_20`: MDI, size 20, für Tabellen-Icons
-- `icons_30`: MDI, size 30, für Bar-Labels
+- `icons_30`: MDI, size 30, für Bar-Labels und Charge-Seite Buttons
 - `icons_100`: MDI, size 100, für große Icons
 - Beim Hinzufügen neuer MDI-Icons: Codepoint zur `glyphs`-Liste hinzufügen
 
@@ -124,5 +142,9 @@ Abhängigkeiten: `python3-cairosvg`, `python3-pil` (via apt)
 - mDNS port 5353 conflicts on macOS — always use `--device 192.168.1.65` for logs
 - `esphome run` always in foreground, never as background process
 - text_sensor `on_value` lambdas format values with units (kWh, %, km, €)
-- Solar %  und Session-Kosten werden auf 1 Nachkommastelle formatiert (snprintf + atof)
+- Solar %, Session-Kosten und Nachgeladen werden auf 1 Nachkommastelle formatiert (snprintf + atof)
 - Mercedes-Bar zeigt Reichweite in km (max 400km), nicht SoC%
+- Ladeende (`sensor.cw_mt_891_e_end_of_charge`) wird als relative Stunden angezeigt ("in Xh")
+- Abfahrtzeit: "unknown" wird als "-" angezeigt
+- Kostenfelder nutzen `montserrat_28_ext` für €-Zeichen (LVGL built-in Fonts haben kein €)
+- Charge-Seite Fill-Bars müssen NACH den Buttons im YAML stehen (LVGL Z-Order = Reihenfolge)

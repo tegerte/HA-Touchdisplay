@@ -13,8 +13,30 @@ esphome:
     priority: -100       # after LVGL init so widgets already exist
     then:
       - lvgl.label.update:
-          id: lbl_pv_start_soc
-          text: "PV-Start, SoC: --"
+          id: lbl_charge_soc
+          text: "SoC: --"
+      # Wait until evcc_mode has received its state from HA, then sync buttons
+      - wait_until:
+          lambda: 'return id(evcc_mode).has_state();'
+      - lvgl.label.update:
+          id: lbl_charge_mode
+          text: !lambda 'return "Modus: " + id(evcc_mode).state;'
+      - lambda: |-
+          std::string mode = id(evcc_mode).state;
+          lv_obj_t *btns[] = {id(btn_mode_pv), id(btn_mode_minpv), id(btn_mode_now), id(btn_mode_off)};
+          const char *modes[] = {"pv", "minpv", "now", "off"};
+          for (int i = 0; i < 4; i++) {
+            if (mode == modes[i]) {
+              lv_obj_add_state(btns[i], LV_STATE_CHECKED);
+            } else {
+              lv_obj_clear_state(btns[i], LV_STATE_CHECKED);
+            }
+          }
+          if (mode == "minpv") {
+            lv_obj_add_state(id(charge_PV_Start), LV_STATE_CHECKED);
+          } else {
+            lv_obj_clear_state(id(charge_PV_Start), LV_STATE_CHECKED);
+          }
 
 ######################################################################
 #  ESP32-S3 chip & framework
@@ -179,6 +201,15 @@ font:
     size: 32
     bpp: 4
 
+  # Montserrat 28 with € sign for value labels
+  - file: "gfonts://Montserrat"
+    id: montserrat_28_ext
+    size: 28
+    bpp: 4
+    extras:
+      - file: "gfonts://Montserrat"
+        glyphs: ["\u20AC"]
+
   # Material Design Icons – only include the codepoints actually used
   # to keep flash usage low. Add new codepoints here before referencing them.
   - file: "fonts/materialdesignicons-webfont.ttf"
@@ -250,6 +281,13 @@ globals:
     restore_value: yes
 
 #######################################################################
+#  Time sync from Home Assistant (needed for relative time calculations)
+#######################################################################
+time:
+  - platform: homeassistant
+    id: ha_time
+
+#######################################################################
 #  Backlight PWM output
 #  inverted=true because the hardware drives the gate low to turn on
 #######################################################################
@@ -313,10 +351,10 @@ sensor:
     on_value:
       then:
         - lvgl.label.update:
-            id: lbl_pv_start_soc
+            id: lbl_charge_soc
             text: !lambda |-
               char buf[24];
-              snprintf(buf, sizeof(buf), "PV-Start, SoC: %d%%", (int)x);
+              snprintf(buf, sizeof(buf), "SoC: %d%%", (int)x);
               return std::string(buf);
         - lambda: |-
             int fill_h = (int)(x * 4.5f);
@@ -344,6 +382,12 @@ sensor:
             if (fill_h > 450) fill_h = 450;
             lv_obj_set_size(id(fill_mercedes), 44, fill_h);
             lv_obj_set_pos(id(fill_mercedes), 0, 450 - fill_h);
+            // Charge page: fill both button bars from left (max 516px at 400km)
+            int fill_w = (int)(x / 400.0f * 516.0f);
+            if (fill_w < 0) fill_w = 0;
+            if (fill_w > 516) fill_w = 516;
+            lv_obj_set_size(id(fill_range_plan), fill_w, 8);
+            lv_obj_set_size(id(fill_range_pv), fill_w, 8);
         - lvgl.label.update:
             id: lbl_bar_mercedes
             text: !lambda |-
@@ -399,6 +443,12 @@ sensor:
             if (fill_h > 450) fill_h = 450;
             lv_obj_set_size(id(fill_ev_charge), 44, fill_h);
             lv_obj_set_pos(id(fill_ev_charge), 0, 450 - fill_h);
+            // Charge page: horizontal charge power bars (top edge of buttons)
+            int fill_w = (int)(x / 11.0f * 516.0f);
+            if (fill_w < 0) fill_w = 0;
+            if (fill_w > 516) fill_w = 516;
+            lv_obj_set_size(id(fill_charge_plan), fill_w, 8);
+            lv_obj_set_size(id(fill_charge_pv), fill_w, 8);
         - lvgl.label.update:
             id: lbl_bar_ev_charge
             text: !lambda |-
@@ -461,16 +511,33 @@ text_sensor:
             id: lbl_sonnenuntergang
             text: !lambda return x;
 
-  # EVCC charging mode → Charge page + Info-Tabelle
+  # EVCC charging mode → Charge page mode buttons
   - platform: homeassistant
     id: evcc_mode
-    entity_id: sensor.evcc_e_auto_laden_mode
+    entity_id: select.evcc_e_auto_laden_mode
     internal: true
     on_value:
       then:
         - lvgl.label.update:
-            id: lbl_pv_start_mode
-            text: !lambda return x;
+            id: lbl_charge_mode
+            text: !lambda 'return "Modus: " + x;'
+        - lambda: |-
+            std::string mode = x;
+            lv_obj_t *btns[] = {id(btn_mode_pv), id(btn_mode_minpv), id(btn_mode_now), id(btn_mode_off)};
+            const char *modes[] = {"pv", "minpv", "now", "off"};
+            for (int i = 0; i < 4; i++) {
+              if (mode == modes[i]) {
+                lv_obj_add_state(btns[i], LV_STATE_CHECKED);
+              } else {
+                lv_obj_clear_state(btns[i], LV_STATE_CHECKED);
+              }
+            }
+            // PV-Start button: green when mode is minpv
+            if (mode == "minpv") {
+              lv_obj_add_state(id(charge_PV_Start), LV_STATE_CHECKED);
+            } else {
+              lv_obj_clear_state(id(charge_PV_Start), LV_STATE_CHECKED);
+            }
 
   # --- Info-Tabelle: weitere HA-Sensoren ---
   - platform: homeassistant
@@ -518,13 +585,26 @@ text_sensor:
 
   - platform: homeassistant
     id: ts_plan_end
-    entity_id: sensor.evcc_e_auto_laden_plan_projected_end
+    entity_id: sensor.cw_mt_891_e_end_of_charge
     internal: true
     on_value:
       then:
         - lvgl.label.update:
             id: lbl_plan_end
-            text: !lambda return x;
+            text: !lambda |-
+              if (x == "unknown" || x.empty()) return std::string("-");
+              // Parse ISO timestamp: 2026-04-05T23:30:00+02:00
+              struct tm tm = {};
+              strptime(x.c_str(), "%Y-%m-%dT%H:%M:%S", &tm);
+              time_t target = mktime(&tm);
+              auto now = id(ha_time).now();
+              if (!now.is_valid()) return std::string("--");
+              time_t now_t = now.timestamp;
+              int diff_h = (int)((target - now_t) / 3600);
+              if (diff_h < 0) diff_h = 0;
+              char buf[16];
+              snprintf(buf, sizeof(buf), "in %dh", diff_h);
+              return std::string(buf);
 
   - platform: homeassistant
     id: ts_plan_soc
@@ -544,7 +624,7 @@ text_sensor:
       then:
         - lvgl.label.update:
             id: lbl_departure
-            text: !lambda return x;
+            text: !lambda 'return x == "unknown" ? "-" : x;'
 
   - platform: homeassistant
     id: ts_energy_cost
@@ -587,7 +667,10 @@ text_sensor:
       then:
         - lvgl.label.update:
             id: lbl_charged_energy
-            text: !lambda return x + " kWh";
+            text: !lambda |-
+              char buf[16];
+              snprintf(buf, sizeof(buf), "%.1f kWh", atof(x.c_str()));
+              return std::string(buf);
 
 #number:
 #  - platform: template
@@ -715,7 +798,7 @@ lvgl:
                   text: "Automationen"
                   on_press:
                     then:
-                      lvgl.page.previous:
+                      lvgl.page.show: Licht
                 - id: page_home
                   text: "\uF015"   # home icon
                   on_press:
@@ -725,7 +808,7 @@ lvgl:
                   text: "Laden"
                   on_press:
                     then:
-                      lvgl.page.next:
+                      lvgl.page.show: Charge
 
 # Uncomment to auto-pause LVGL after idle timeout:
 #  on_idle:
@@ -1216,74 +1299,126 @@ lvgl:
                   text_color: 0xFFFFFF
 
 ###  -------------------------------------------------------------------------------------------
-###  -----------------------------        STARTE PV-LADEN Button    -----------------------------
+###  -----------------------------        Lademodus-Buttons         -----------------------------
 ###  -------------------------------------------------------------------------------------------
-        # Activates PV surplus charging via evcc script.
-        # Label shows live battery SoC; turns green when checked.
+        # Row of 4 mode buttons – calls script.evcc_lademodus with modus parameter.
+        # Active mode is highlighted green via evcc_mode sensor on_value.
         - button:
-            x: 100
-            y: 100
-            width: 140
-            height: 140
+            id: btn_mode_pv
+            x: 20
+            y: 55
+            width: 120
+            height: 70
             checkable: true
-            id: charge_PV_Start
-            bg_color: 0x00c0ff
-            border_color: 0x005d7f
-            border_width: 5
             checked:
               bg_color: 0x00AA00
               border_color: 0x00AA00
               bg_opa: COVER
             widgets:
               - label:
-                  id: charge_pv_start_icon
                   align: CENTER
-                  y: -15
-                  text_font: icons_100
-                  text: "\U000F0A72"           # mdi-solar-power
-#              - label:
-#                  text: "PV-Start"
-#                  align: CENTER
-#                  y: 40
-#                  text_font: montserrat_18
-              - label:
-                  id: lbl_pv_start_soc
-                  align: CENTER
-                  y: 40
-                  text_font: montserrat_18
-                  text_color: 0xCCCCCC
-                  text: "SoC: --%"
+                  text: "PV"
+                  text_font: montserrat_20
             on_short_click:
               - homeassistant.action:
-                  action: script.evcc_minpv_aktivieren
+                  action: script.evcc_lademodus
+                  data:
+                    modus: "pv"
+        - button:
+            id: btn_mode_minpv
+            x: 152
+            y: 55
+            width: 120
+            height: 70
+            checkable: true
+            checked:
+              bg_color: 0x00AA00
+              border_color: 0x00AA00
+              bg_opa: COVER
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "Min+PV"
+                  text_font: montserrat_20
+            on_short_click:
+              - homeassistant.action:
+                  action: script.evcc_lademodus
+                  data:
+                    modus: "minpv"
+        - button:
+            id: btn_mode_now
+            x: 284
+            y: 55
+            width: 120
+            height: 70
+            checkable: true
+            checked:
+              bg_color: 0x00AA00
+              border_color: 0x00AA00
+              bg_opa: COVER
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "Schnell"
+                  text_font: montserrat_20
+            on_short_click:
+              - homeassistant.action:
+                  action: script.evcc_lademodus
+                  data:
+                    modus: "now"
+        - button:
+            id: btn_mode_off
+            x: 416
+            y: 55
+            width: 120
+            height: 70
+            checkable: true
+            checked:
+              bg_color: 0x00AA00
+              border_color: 0x00AA00
+              bg_opa: COVER
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "Aus"
+                  text_font: montserrat_20
+            on_short_click:
+              - homeassistant.action:
+                  action: script.evcc_lademodus
+                  data:
+                    modus: "off"
 
-        # Current EVCC mode label shown below the PV-Start button
+        # Current mode + SoC display
         - label:
-            id: lbl_pv_start_mode
-            x: 100
-            y: 250
-            width: 140
-            text_align: CENTER
+            id: lbl_charge_mode
+            x: 20
+            y: 135
+            width: 250
             text: "Modus: --"
-            text_font: montserrat_14
+            text_font: montserrat_18
             text_color: 0x9AB0C8
+        - label:
+            id: lbl_charge_soc
+            x: 300
+            y: 135
+            width: 236
+            text: "SoC: --"
+            text_font: montserrat_18
+            text_color: 0xCCCCCC
 
 ###  -------------------------------------------------------------------------------------------
-###  -----------------------------        60% um 7 Button          -----------------------------
+###  -----------------------------        Ladeplan-Button           -----------------------------
 ###  -------------------------------------------------------------------------------------------
         # Schedules charging to reach 60 % by 07:00.
         # If a plan is already active, pressing the button deletes it instead.
         - button:
-            x: 100
-            y: 260
-            width: 140
-            height: 140
+            x: 20
+            y: 175
+            width: 516
+            height: 80
             checkable: true
             id: charge_60perc_7
-            bg_color: 0x00c0ff
-            border_color: 0x005d7f
-            border_width: 5
-            #bg_opa: TRANSP
+            bg_opa: COVER
             checked:
               bg_color: 0x00AA00
               border_color: 0x00AA00
@@ -1291,15 +1426,14 @@ lvgl:
             widgets:
               - label:
                   id: charge_60perc_7_icon
-                  align: CENTER
-                  y: -15
-                  text_font: icons_100
+                  align: LEFT_MID
+                  x: 10
+                  text_font: icons_30
                   text: "\U000F05F1"   # mdi-ev-station
               - label:
                   text: "60% bis 7:00"
                   align: CENTER
-                  y: 45
-                  text_font: montserrat_18
+                  text_font: montserrat_20
             on_short_click:
               - if:
                   condition:
@@ -1310,6 +1444,100 @@ lvgl:
                   else:
                     - homeassistant.action:
                         action: script.evcc_ladeplan_morgen     # no plan → create one
+
+###  -------------------------------------------------------------------------------------------
+###  -----------------------------        PV-Start Button           -----------------------------
+###  -------------------------------------------------------------------------------------------
+        # Activates MinPV charging AND sets battery limits so charging starts immediately.
+        # Calls the dedicated script (not just the mode switch).
+        - button:
+            id: charge_PV_Start
+            x: 20
+            y: 270
+            width: 516
+            height: 80
+            checkable: false
+            bg_opa: COVER
+            checked:
+              bg_color: 0x00AA00
+              border_color: 0x00AA00
+              bg_opa: COVER
+            widgets:
+              - label:
+                  align: LEFT_MID
+                  x: 10
+                  text_font: icons_30
+                  text: "\U000F0A72"           # mdi-solar-power
+              - label:
+                  text: "PV-Start"
+                  align: CENTER
+                  text_font: montserrat_20
+            on_short_click:
+              - homeassistant.action:
+                  action: script.evcc_minpv_aktivieren
+
+        # Charge power bars (top edge of buttons, dark green, max 11kW → 516px)
+        - obj:
+            id: fill_charge_plan
+            x: 20
+            y: 175
+            width: 0
+            height: 8
+            bg_color: 0x0D5C2A
+            bg_opa: COVER
+            border_width: 0
+            radius: 0
+        - obj:
+            id: fill_charge_pv
+            x: 20
+            y: 270
+            width: 0
+            height: 8
+            bg_color: 0x0D5C2A
+            bg_opa: COVER
+            border_width: 0
+            radius: 0
+        # 1-phase marker at 3.6kW (3.6/11 * 516 = 169px)
+        - obj:
+            x: 189
+            y: 175
+            width: 2
+            height: 8
+            bg_color: 0xFFFF00
+            bg_opa: COVER
+            border_width: 0
+            radius: 0
+        - obj:
+            x: 189
+            y: 270
+            width: 2
+            height: 8
+            bg_color: 0xFFFF00
+            bg_opa: COVER
+            border_width: 0
+            radius: 0
+
+        # Range fill bars (bottom edge of buttons, orange, max 400km → 516px)
+        - obj:
+            id: fill_range_plan
+            x: 20
+            y: 247
+            width: 0
+            height: 8
+            bg_color: 0xFF9500
+            bg_opa: COVER
+            border_width: 0
+            radius: 0
+        - obj:
+            id: fill_range_pv
+            x: 20
+            y: 342
+            width: 0
+            height: 8
+            bg_color: 0xFF9500
+            bg_opa: COVER
+            border_width: 0
+            radius: 0
 
         # --- EV Info-Tabelle rechts ---
         - obj:
@@ -1468,7 +1696,7 @@ lvgl:
                   y: 277
                   width: 216
                   text: "--"
-                  text_font: montserrat_28
+                  text_font: montserrat_28_ext
                   text_color: 0xDDDDDD
                   text_align: RIGHT
               - label:
@@ -1514,7 +1742,7 @@ lvgl:
                   y: 379
                   width: 216
                   text: "--"
-                  text_font: montserrat_28
+                  text_font: montserrat_28_ext
                   text_color: 0xDDDDDD
                   text_align: RIGHT
               - label:

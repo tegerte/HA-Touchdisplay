@@ -17,9 +17,19 @@ ESPHome configuration for a **Makerfabs MaTouch ESP32-S3 7-inch display** integr
 | ----------- | ----------------------------------------------------------------------- |
 | `main_page` | Thermometer, vertical bars, solar info table, temperature graph         |
 | `Licht`     | Office light on/off toggle                                              |
-| `Charge`    | EV charging control (PV charging, schedule) + EV info table            |
+| `Charge`    | EV charging controls (mode buttons, PV-Start, schedule) + EV info table |
 
-Navigation via a button matrix at the bottom of the screen (back / home / next).
+Navigation via a button matrix at the bottom of the screen (Automationen / home / Laden) — each button navigates directly to the target page.
+
+## Charge Page
+
+The Charge page provides full EV charging control:
+
+- **4 Mode buttons** (PV / Min+PV / Schnell / Aus) — set evcc charging mode via `script.evcc_lademodus`
+- **Active mode** is highlighted green automatically via the `select.evcc_e_auto_laden_mode` entity
+- **Ladeplan button** (60% bis 7:00) — creates/deletes a charging plan
+- **PV-Start button** — activates MinPV charging with battery limits via `script.evcc_minpv_aktivieren`, highlighted green when mode is `minpv`
+- Both large buttons show **horizontal fill bars**: charge power (top, dark green, 3.6 kW marker) and range (bottom, orange)
 
 ## Vertical Bar Graphs (left side)
 
@@ -84,7 +94,7 @@ sudo systemctl enable --now graph-server
 ```bash
 esphome compile ha_7zoll_disp.yaml                                        # compile only
 esphome run ha_7zoll_disp.yaml                                            # compile + OTA upload
-esphome run ha_7zoll_disp.yaml --device /dev/cu.usbmodem114401            # via USB
+esphome run ha_7zoll_disp.yaml --device /dev/cu.usbmodem14401             # via USB
 esphome logs ha_7zoll_disp.yaml --device 192.168.1.65                     # serial logs (macOS: use IP, not mDNS)
 ```
 

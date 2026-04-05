@@ -1,0 +1,14 @@
+Tabelle;Zeile;Label;Label-ID;HA Entity;Formatierung;Änderungen;
+Solar;1;PV heute;lbl_daily_pv_energy;sensor.daily_pv_energy;"x + "" kWh""";;
+Solar;2;PV verbl.;lbl_pv_restenergie;sensor.pv_verbleibende_energie_heute;"x + "" kWh""";;
+Solar;3;Autarkie;lbl_autarkie;sensor.daily_self_suff_rate;"x + "" %""";;
+Solar;4;Sonnenuntg.;lbl_sonnenuntergang;sensor.zeit_bis_sonnenuntergang;x (direkt);;
+EV;1;Solar %;lbl_solar_pct;sensor.evcc_stat_total_solar_percentage;snprintf %.1f %%;;
+EV;2;Reichweite;lbl_range_electric;sensor.cw_mt_891_e_range_electric;"x + "" km""";;
+EV;3;Ladeende;lbl_plan_end;sensor.evcc_e_auto_laden_plan_projected_end;x (direkt);Nutze sensor.cw_mt_891_e_end_of_charge;
+EV;4;SOC Soll;lbl_plan_soc;sensor.evcc_e_auto_laden_effective_plan_soc;"x + "" %""";;
+EV;5;Abfahrtzeit;lbl_departure;sensor.cw_mt_891_e_departure_time;x (direkt);Wenn „unknown“ zeige „-„;
+EV;6;Fahrenergiekosten;lbl_energy_cost;sensor.nachgeladen_energie_kosten;"x + "" €""";Das Eurozeichen wird nicht gerendert;
+EV;7;Nachgel. Reichweite;lbl_sess_range;sensor.nachgeladene_reichweite;"x + "" km""";;
+EV;8;Sess. Kosten;lbl_sess_price;sensor.evcc_e_auto_laden_session_price;snprintf %.1f €;Das Eurozeichen wird nicht gerendert;
+EV;9;Nachgeladen;lbl_charged_energy;sensor.evcc_e_auto_laden_charged_energy;"x + "" kWh""";Runde auf eine nachkommastelle;
