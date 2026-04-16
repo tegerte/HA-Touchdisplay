@@ -3,3 +3,7 @@
 # You can modify this file to suit your needs.
 /.esphome/
 /secrets.yaml
+.DS_Store
+.idea/
+log.txt
+*.numbers

@@ -56,8 +56,8 @@ HA Automation (browser_mod) → Python server (port 8765) → ESP32 (online_imag
 
 1. **HA Automation** navigates every 15 min to a Lovelace view with an apexcharts-card,
    renders the SVG via JavaScript and POSTs it to the Python server
-2. **Python server** (`/opt/graph_server/server.py` on the home server) converts
-   SVG → JPEG via cairosvg + Pillow and stores it in RAM
+2. **Python server** (`/opt/graph_server/server.py` on the home server) expands the SVG viewBox by 10% (prevents right-axis clipping),
+   renders at 2× resolution via cairosvg, downscales to 729×275 with Pillow LANCZOS, and stores JPEG in RAM
 3. **ESP32** fetches the JPEG every 2 min via `online_image` and displays it via an LVGL `image` widget
 
 ### Server setup (Linux Mint / Debian)

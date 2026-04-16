@@ -94,7 +94,7 @@ Everything lives in a single file: **`ha_7zoll_disp.yaml`**
 
 ```python
 # Läuft als systemd-Dienst: graph-server.service (User=tegerte)
-# POST /save   → empfängt SVG, konvertiert zu JPEG 729x275 via cairosvg+Pillow
+# POST /save   → empfängt SVG, erweitert viewBox um 10% (rechte Achse), rendert 2x (1458x550) via cairosvg, skaliert auf 729x275 mit LANCZOS
 # GET /temp_graph.jpg → liefert letztes JPEG mit Content-Length Header
 # CORS-Headers für alle Requests (browser_mod sendet von HA-Frontend)
 ```
@@ -147,4 +147,6 @@ Abhängigkeiten: `python3-cairosvg`, `python3-pil` (via apt)
 - Ladeende (`sensor.cw_mt_891_e_end_of_charge`) wird als relative Stunden angezeigt ("in Xh")
 - Abfahrtzeit: "unknown" wird als "-" angezeigt
 - Kostenfelder nutzen `montserrat_28_ext` für €-Zeichen (LVGL built-in Fonts haben kein €)
+- Fahrenergiekosten zeigen Einheit „€/100km" (nicht nur „€")
+- `server.py` liegt auch lokal im Repo (Referenzkopie, Deployment auf Homeserver manuell)
 - Charge-Seite Fill-Bars müssen NACH den Buttons im YAML stehen (LVGL Z-Order = Reihenfolge)

@@ -634,7 +634,7 @@ text_sensor:
       then:
         - lvgl.label.update:
             id: lbl_energy_cost
-            text: !lambda return x + " \u20AC";
+            text: !lambda return x + " \u20AC" + "/100km";
 
   - platform: homeassistant
     id: ts_sess_range
