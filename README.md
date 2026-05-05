@@ -56,14 +56,25 @@ HA Automation (browser_mod) → Python server (port 8765) → ESP32 (online_imag
 
 1. **HA Automation** navigates every 15 min to a Lovelace view with an apexcharts-card,
    renders the SVG via JavaScript and POSTs it to the Python server
-2. **Python server** (`/opt/graph_server/server.py` on the home server) expands the SVG viewBox by 10% (prevents right-axis clipping),
-   renders at 2× resolution via cairosvg, downscales to 729×275 with Pillow LANCZOS, and stores JPEG in RAM
-3. **ESP32** fetches the JPEG every 2 min via `online_image` and displays it via an LVGL `image` widget
+2. **Python server** (`/opt/graph_server/server.py` on the home server):
+   - Resolves CSS custom properties (`var(--primary-text-color)` → `#ffffff`)
+   - Bumps `apexcharts-text` font-size 3× so axis labels stay legible after downscaling
+   - Strips `<foreignObject>` (legend HTML, not needed)
+   - Renders via **`rsvg-convert`** (librsvg) at 2× target resolution. CairoSVG was previously used but rendered `fill="#ffffff"` as green on `.apexcharts-text` elements — librsvg renders correctly
+   - Downsamples 2× via PIL `Image.BOX` filter (no LANCZOS ringing on 1-px strokes)
+   - JPEG quality 95, `subsampling=0` (4:4:4) against chroma artifacts on saturated gradients
+3. **ESP32** fetches the JPEG via `online_image` and displays it via an LVGL `image` widget
+
+The server emits two endpoints:
+
+- `/temp_graph.jpg` — 729×275, used by the MAtouch display, viewBox expanded 10% to the right (legacy axis-clip workaround)
+- `/temp_graph_580.jpg` — 580×185, used by the Waveshare ESP32-S3-Touch-LCD-7 display (smaller decode buffer, no viewBox hack)
+- `/temp_graph_580.png`, `/raw.svg`, `/processed.svg` — debug endpoints
 
 ### Server setup (Linux Mint / Debian)
 
 ```bash
-sudo apt install python3-cairosvg python3-pil
+sudo apt install python3-pil librsvg2-bin
 sudo mkdir -p /opt/graph_server
 sudo nano /opt/graph_server/server.py   # paste server code
 sudo nano /etc/systemd/system/graph-server.service

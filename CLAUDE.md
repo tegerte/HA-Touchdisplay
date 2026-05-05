@@ -94,12 +94,18 @@ Everything lives in a single file: **`ha_7zoll_disp.yaml`**
 
 ```python
 # Läuft als systemd-Dienst: graph-server.service (User=tegerte)
-# POST /save   → empfängt SVG, erweitert viewBox um 10% (rechte Achse), rendert 2x (1458x550) via cairosvg, skaliert auf 729x275 mit LANCZOS
-# GET /temp_graph.jpg → liefert letztes JPEG mit Content-Length Header
+# POST /save   → empfängt SVG, normalisiert (var()-Replacement, font-size-Bump 3x,
+#                <foreignObject> raus), rendert via rsvg-convert mit 2x Supersampling,
+#                downsampled mit PIL Image.BOX, encodiert JPEG quality=95 subsampling=0
+# GET /temp_graph.jpg     → 729x275 fuer MAtouch (mit viewBox-10%-Hack)
+# GET /temp_graph_580.jpg → 580x185 fuer Waveshare ESP32-S3-Touch-LCD-7
+# GET /temp_graph_580.png → lossless-Variante (Diagnose)
+# GET /raw.svg            → unmodifizierte POST-SVG (Diagnose)
+# GET /processed.svg      → SVG nach Server-Normalisierung (Diagnose)
 # CORS-Headers für alle Requests (browser_mod sendet von HA-Frontend)
 ```
 
-Abhängigkeiten: `python3-cairosvg`, `python3-pil` (via apt)
+Abhängigkeiten: `python3-pil`, **`librsvg2-bin`** (statt python3-cairosvg — cairosvg renderte `fill="#ffffff"` auf `.apexcharts-text` als grün, nicht zu workarounden).
 
 **HA-Automation (Temp-Graph Screenshot):**
 
