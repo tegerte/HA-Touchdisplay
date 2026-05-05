@@ -891,12 +891,6 @@ lvgl:
                       width: 2
                       color: 0xFF0000
                       r_mod: -4
-                  - tick_style:
-                      start_value: -10
-                      end_value: 40
-                      color_start: 0x0000bd   # blue = cold
-                      color_end: 0xbd0000     # red  = hot
-                      width: 1
               - range_from: -10   # label scale: matches real °C values
                 range_to: 40
                 angle_range: 240
@@ -912,6 +906,13 @@ lvgl:
                     length: 10
                     color: 0xCCCCCC
                     label_gap: 10
+                indicators:
+                  - tick_style:
+                      start_value: -10
+                      end_value: 40
+                      color_start: 0x0000bd   # blue = cold
+                      color_end: 0xbd0000     # red  = hot
+                      width: 1
             widgets:
               - label:
                   id: temperature_text
