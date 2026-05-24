@@ -398,7 +398,7 @@ sensor:
   # PV Tagesrestenergie → Info-Label auf main_page
   - platform: homeassistant
     id: pv_tagesrestenergie
-    entity_id: sensor.pv_verbleibende_energie_heute
+    entity_id: sensor.pv_verbleibende_energie_heute_konsens
     internal: true
     on_value:
       then:
