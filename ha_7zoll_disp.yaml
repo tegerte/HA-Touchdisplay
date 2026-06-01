@@ -237,6 +237,7 @@ font:
       "\U000F0336", # mdi-lightbulb-outline
       "\U000F05F1", # mdi-ev-station
       "\U000F0A72", # solar-power
+      "\U000F081C", # mdi-air-conditioner
       ]
 
   # Smaller MDI icons for bar labels and info labels on main_page
@@ -499,6 +500,18 @@ text_sensor:
               }
               snprintf(buf, sizeof(buf), "%s", icon.c_str());
               return buf;
+
+  # Klima OG (Shelly) state → toggles Klima button checked/disabled
+  - platform: homeassistant
+    id: ts_klima_oben
+    entity_id: switch.klima_oben
+    on_value:
+      then:
+        - lvgl.widget.update:
+            id: btn_klima
+            state:
+              checked: !lambda return (0 == x.compare(std::string{"on"}));
+              disabled: !lambda return ((0 == x.compare(std::string{"unavailable"})) or (0 == x.compare(std::string{"unknown"})));
 
   # Zeit bis Sonnenuntergang → Info-Label auf main_page
   - platform: homeassistant
@@ -1237,7 +1250,8 @@ lvgl:
             text_color: 0xAAAAAA
 
     ###################################################################
-    #  Page 2 – Licht: office light toggle
+    #  Page 2 – Automationen & Schalter
+    #  Zwei vertikal getrennte Panels (Licht | Schalter) ueber volle Hoehe
     ###################################################################
     - id: Licht
       bg_color: 0x1C2128
@@ -1249,37 +1263,101 @@ lvgl:
             styles: header_footer
             widgets:
               - label:
-                  text: "Licht"
+                  text: "Automationen & Schalter"
                   align: CENTER
                   text_align: CENTER
                   text_color: 0xFFFFFF
 
-        # Toggle button for office light; icon and checked state updated
-        # by ts_remote_light text sensor
-        - button:
-            x: 100
-            y: 100
-            width: 120
-            height: 120
-            checkable: true
-            id: btn_lightbulb
+        # --- Linkes Panel: Licht ---
+        - obj:
+            x: 10
+            y: 40
+            width: 497
+            height: 520
+            bg_color: 0x252D38
+            bg_opa: COVER
+            border_color: 0x3A4250
+            border_width: 1
+            radius: 10
+            pad_all: 0
             widgets:
               - label:
-                  id: lbl_lightbulb
+                  text: "Licht"
+                  align: TOP_MID
+                  y: 12
+                  text_font: montserrat_22
+                  text_color: 0xCCCCCC
+              # Toggle button for office light; icon and checked state updated
+              # by ts_remote_light text sensor
+              - button:
                   align: CENTER
-                  y: -15
-                  text_font: icons_100
-                  text: "\U000F0336" # mdi-lightbulb-outline (default)
+                  y: 25
+                  width: 120
+                  height: 120
+                  checkable: true
+                  id: btn_lightbulb
+                  widgets:
+                    - label:
+                        id: lbl_lightbulb
+                        align: CENTER
+                        y: -15
+                        text_font: icons_100
+                        text: "\U000F0336" # mdi-lightbulb-outline (default)
+                    - label:
+                        text: "Buerolicht"
+                        align: CENTER
+                        y: 45
+                        text_font: montserrat_18
+                  on_short_click:
+                    - homeassistant.action:
+                        action: light.toggle
+                        data:
+                          entity_id: light.buerolicht
+
+        # --- Rechtes Panel: Schalter ---
+        - obj:
+            x: 517
+            y: 40
+            width: 497
+            height: 520
+            bg_color: 0x252D38
+            bg_opa: COVER
+            border_color: 0x3A4250
+            border_width: 1
+            radius: 10
+            pad_all: 0
+            widgets:
               - label:
-                  text: "Buerolicht"
+                  text: "Schalter"
+                  align: TOP_MID
+                  y: 12
+                  text_font: montserrat_22
+                  text_color: 0xCCCCCC
+              # Toggle button for Klima OG (Shelly); checked state updated by
+              # ts_klima_oben text sensor
+              - button:
                   align: CENTER
-                  y: 45
-                  text_font: montserrat_18
-            on_short_click:
-              - homeassistant.action:
-                  action: light.toggle
-                  data:
-                    entity_id: light.buerolicht
+                  y: 25
+                  width: 120
+                  height: 120
+                  checkable: true
+                  id: btn_klima
+                  widgets:
+                    - label:
+                        align: CENTER
+                        y: -15
+                        text_font: icons_100
+                        text: "\U000F081C" # mdi-air-conditioner
+                    - label:
+                        text: "Klima OG"
+                        align: CENTER
+                        y: 45
+                        text_font: montserrat_18
+                  on_short_click:
+                    - homeassistant.action:
+                        action: switch.toggle
+                        data:
+                          entity_id: switch.klima_oben
 
     ###################################################################
     #  Page 3 – Charge: EV charging controls
