@@ -1,4 +1,4 @@
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from PIL import Image
 import io
 import re
@@ -140,4 +140,4 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
 
-HTTPServer(("0.0.0.0", 8765), Handler).serve_forever()
+ThreadingHTTPServer(("0.0.0.0", 8765), Handler).serve_forever()
